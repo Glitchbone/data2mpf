@@ -9,7 +9,6 @@
   "author": "Adrien Glitchbone",
   "license": "ISC",
   "dependencies": {
-    "tonegenerator": "0.0.2",
     "waveheader": "0.0.2"
   }
 }
