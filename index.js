@@ -1,12 +1,25 @@
 var waveheader = require('waveheader');
+var wav = require('wav');
+var Speaker = require('speaker');
 var fs = require('fs');
 
 var SAMPLE_RATE = 44100;
+var VOLUME = 100;
 
 var fileName = [0x34, 0x12];
 var startAdress = [0x00, 0x18];
-var endAdress = [0x20, 0x18];
-var data = [0x1E];
+var endAdress = [0x25, 0x18];
+var data = [
+	0xdd, 0x21, 0x20, 0x18,
+	0xcd, 0xfe, 0x05,
+	0xfe, 0x13, 
+	0x20, 0xf9,
+	0x76,
+	0x00, 0x00, 0x00, 0x00,
+	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
+	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
+	0xae, 0xb5, 0x1f, 0x85, 0x8f, 0x37
+];
 
 var waveData = [];
 
@@ -56,14 +69,14 @@ function processData() {
 }
 
 function generateByte(byte) {
-    
-    byte = padByte(dec2Bin(byte));
+
+    byte = padByte(dec2Bin(byte)).split('').reverse().join('');
     
     // Start Bit
     generateBit(0);
     
     for (var i = 0; i < byte.length; i++) {
-        generateBit(byte[i])
+        generateBit(byte[i]);
     }
     
     // End Bit
@@ -78,7 +91,7 @@ function generateChecksum() {
     for (var i = 0; i < data.length; i++) {
         sum = (sum + data[i]) % 256;
     }
-    
+	
     generateByte(sum);
 
 }
@@ -108,7 +121,13 @@ function generateBit(bit) {
 }
 
 function pushTone(freq) {
-    waveData = waveData.concat(generateWaveCycle(Math.round(SAMPLE_RATE / freq) * 2));
+	
+	var samples = generateWaveCycle(Math.round(SAMPLE_RATE / freq) * 2);
+	
+	for (var i = 0; i < samples.length; i++) {
+		waveData.push(samples[i]);
+	}
+	
 }
 
 function dec2Bin(dec) {
@@ -125,14 +144,12 @@ function padByte(byte) {
     return s;
 }
 
-function generateWaveCycle(cycle, volume) {
+function generateWaveCycle(cycle) {
     
-    var volume = volume || 100;
     var data = [];
-    var tmp;
     
     for (var i = 0; i < cycle; i++) {
-        data[i] = volume * Math.sin((i / cycle) * Math.PI * 2) > 0 ? volume : 0;
+        data[i] = VOLUME * Math.sin((i / cycle) * Math.PI * 2) > 0 ? VOLUME : -VOLUME;
     }
     
     return data;
@@ -145,3 +162,14 @@ writer.write(waveheader(waveData.length));
 
 writer.write(new Buffer(waveData));
 writer.end();
+
+// Play wav
+
+var file = fs.createReadStream('output.wav');
+var reader = new wav.Reader();
+
+reader.on('format', function(format) {
+	reader.pipe(new Speaker(format));
+});
+
+file.pipe(reader);

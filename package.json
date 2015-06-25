@@ -9,6 +9,9 @@
   "author": "Adrien Glitchbone",
   "license": "ISC",
   "dependencies": {
+    "intel-hex": "^0.1.1",
+    "speaker": "^0.2.5",
+    "wav": "^1.0.0",
     "waveheader": "0.0.2"
   }
 }
