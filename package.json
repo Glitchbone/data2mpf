@@ -1,0 +1,15 @@
+{
+  "name": "data2mpf",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Adrien Glitchbone",
+  "license": "ISC",
+  "dependencies": {
+    "tonegenerator": "0.0.2",
+    "waveheader": "0.0.2"
+  }
+}
