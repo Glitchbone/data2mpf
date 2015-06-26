@@ -4,22 +4,13 @@ var Speaker = require('speaker');
 var fs = require('fs');
 
 var SAMPLE_RATE = 44100;
-var VOLUME = 100;
+var FREQ_1K = 1000;
+var FREQ_2K = 2000;
 
-var fileName = [0x34, 0x12];
-var startAdress = [0x00, 0x18];
-var endAdress = [0x25, 0x18];
-var data = [
-	0xdd, 0x21, 0x20, 0x18,
-	0xcd, 0xfe, 0x05,
-	0xfe, 0x13, 
-	0x20, 0xf9,
-	0x76,
-	0x00, 0x00, 0x00, 0x00,
-	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
-	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
-	0xae, 0xb5, 0x1f, 0x85, 0x8f, 0x37
-];
+var fileName = '1234';
+var startAdress = '1800';
+var endAdress = '1825';
+var data = 'DD212018CDFE05FE1320F9760000000000000000000000000000000000000000AEB51F858F37';
 
 var waveData = [];
 
@@ -33,20 +24,20 @@ function processData() {
 
     // File name
     console.log('Generating File name');
-    fileName.forEach(function(el) {
-        generateByte(el);
+    hexStrToWord(fileName).forEach(function(byte) {
+        writeByte(byte);
     });
     
     // Start Adress
     console.log('Generating Start adress');
-    startAdress.forEach(function(el) {
-        generateByte(el);
+    hexStrToWord(startAdress).forEach(function(byte) {
+        writeByte(byte);
     });
     
     // End Adress
     console.log('Generating End adress');
-    endAdress.forEach(function(el) {
-        generateByte(el);
+    hexStrToWord(endAdress).forEach(function(byte) {
+        writeByte(byte);
     });
     
     console.log('Generating Checksum');
@@ -58,8 +49,8 @@ function processData() {
     
     // Actual Data
     console.log('Generating Data');
-    data.forEach(function(el) {
-        generateByte(el);
+    hexStrToBytes(data).forEach(function(byte) {
+        writeByte(byte);
     });
     
     // Tail sync
@@ -68,61 +59,64 @@ function processData() {
     
 }
 
-function generateByte(byte) {
+function writeByte(byte) {
 
     byte = padByte(dec2Bin(byte)).split('').reverse().join('');
     
     // Start Bit
-    generateBit(0);
+    writeBit(0);
     
     for (var i = 0; i < byte.length; i++) {
-        generateBit(byte[i]);
+        writeBit(byte[i]);
     }
     
     // End Bit
-    generateBit(1);
+    writeBit(1);
     
 }
 
 function generateChecksum() {
     
     var sum = 0;
+	
+	var dataBuffer = hexStrToBytes(data);
     
-    for (var i = 0; i < data.length; i++) {
-        sum = (sum + data[i]) % 256;
+    for (var i = 0; i < dataBuffer.length; i++) {
+        sum = (sum + dataBuffer[i]) % 256;
     }
 	
-    generateByte(sum);
+    writeByte(sum);
 
 }
 
 function generateLeadSync() {
     for (var i = 0; i < 4000; i++) {
-        pushTone(1000);
+        pushTone(FREQ_1K);
     }
 }
 
 function generateMidTailSync() {
     for (var i = 0; i < 4000; i++) {
-        pushTone(2000);
+        pushTone(FREQ_2K);
     }
 }
 
-function generateBit(bit) {
+function writeBit(bit) {
         
     for (var i = 0; i < (bit == 1 ? 4 : 8); i++) {
-        pushTone(2000);
+        pushTone(FREQ_2K);
     }
 
     for (var i = 0; i < (bit == 1 ? 4 : 2); i++) {
-        pushTone(1000);
+        pushTone(FREQ_1K);
     }
     
 }
 
 function pushTone(freq) {
 	
-	var samples = generateWaveCycle(Math.round(SAMPLE_RATE / freq) * 2);
+	var samplesLength = Math.round(SAMPLE_RATE / freq) * 2;
+	var samples = generateWaveCycle(samplesLength);
 	
 	for (var i = 0; i < samples.length; i++) {
 		waveData.push(samples[i]);
@@ -135,13 +129,27 @@ function dec2Bin(dec) {
 }
 
 function padByte(byte) {
-    var s = byte + '',
-        needed = 8 - s.length;
-        
-    if (needed > 0) {
-        s = (Math.pow(10, needed) + '').slice(1) + s;
-    } 
-    return s;
+	return byte.length > 8 ? byte : Array(8 - byte.length + 1).join('0') + byte;
+}
+
+function hexStrToBytes(hex) {
+	
+    if (hex.length % 2 === 1) {
+		throw new Error('Odd number of characters...');
+	}
+	
+    if (hex.indexOf('0x') === 0) {
+		hex = hex.slice(2);
+	}
+	
+    return hex.match(/../g).map(function(x) {
+		return parseInt(x,16);
+	});
+	
+}
+
+function hexStrToWord(input) {
+	return hexStrToBytes('' + input).reverse();
 }
 
 function generateWaveCycle(cycle) {
@@ -149,7 +157,7 @@ function generateWaveCycle(cycle) {
     var data = [];
     
     for (var i = 0; i < cycle; i++) {
-        data[i] = VOLUME * Math.sin((i / cycle) * Math.PI * 2) > 0 ? VOLUME : -VOLUME;
+        data[i] = Math.sin((i / cycle) * Math.PI * 2) > 0 ? 127 : -128;
     }
     
     return data;
