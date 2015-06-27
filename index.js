@@ -9,7 +9,6 @@ var FREQ_2K = 2000;
 
 var fileName = '1234';
 var startAdress = '1800';
-var endAdress = '1825';
 var data = 'DD212018CDFE05FE1320F9760000000000000000000000000000000000000000AEB51F858F37';
 
 var waveData = [];
@@ -19,42 +18,38 @@ processData();
 function processData() {
     
     // Lead Sync
-    console.log('Generating Lead sync');
     generateLeadSync();
 
     // File name
-    console.log('Generating File name');
     hexStrToWord(fileName).forEach(function(byte) {
         writeByte(byte);
     });
     
     // Start Adress
-    console.log('Generating Start adress');
     hexStrToWord(startAdress).forEach(function(byte) {
         writeByte(byte);
     });
     
     // End Adress
-    console.log('Generating End adress');
-    hexStrToWord(endAdress).forEach(function(byte) {
+	var endAdress = getEndAdress(startAdress, data.length / 2);
+	console.log(endAdress);
+	
+    endAdress.forEach(function(byte) {
         writeByte(byte);
     });
     
-    console.log('Generating Checksum');
+	// Checksum
     generateChecksum();
     
     // Mid sync
-    console.log('Generating Mid sync');
     generateMidTailSync();
     
     // Actual Data
-    console.log('Generating Data');
     hexStrToBytes(data).forEach(function(byte) {
         writeByte(byte);
     });
     
     // Tail sync
-    console.log('Generating Tail sync');
     generateMidTailSync();
     
 }
@@ -122,6 +117,10 @@ function pushTone(freq) {
 		waveData.push(samples[i]);
 	}
 	
+}
+
+function getEndAdress(start, bytesLength) {
+	return hexStrToWord((parseInt(start, 16) + bytesLength - 1).toString(16));
 }
 
 function dec2Bin(dec) {
